@@ -843,9 +843,38 @@ if( ! function_exists( 'wpt_table_row_generator' ) ){
         if( ! isset($args['s']) ){
             $args['suppress_filters'] = 1;
         }
-        // var_dump($args['tax_query']);
-        $product_loop = new WP_Query($args);
-        // var_dump($product_loop);
+        $args['fields'] = 'ids';
+        $all_product_ids = get_posts($args);
+        // The query
+        $feature_post_ids = get_posts( 
+            array(
+            'post_type'           => 'product',
+            'post_status'         => 'publish',
+            'ignore_sticky_posts' => 1,
+            'posts_per_page'      => 50,
+            'fields'              => 'ids',
+            'post__in'            => $all_product_ids,
+            'tax_query'           => array( 
+                array(
+                'taxonomy' => 'product_visibility',
+                'field'    => 'name',
+                'terms'    => 'featured',
+                'operator' => 'IN', // or 'NOT IN' to exclude feature products
+            )
+            )
+        ) 
+    );
+       $without_featured = array_diff( $all_product_ids, $feature_post_ids  );
+       $feature_product_first = array_merge($feature_post_ids, $without_featured);
+
+        $product_loop = new WP_Query(  array(
+            'post_type'           => 'product',
+            'post_status'         => 'publish',
+            'ignore_sticky_posts' => 1,
+            'post__in'            => $feature_product_first,
+            'orderby'             => 'post__in', 
+            )
+        );
 
         /**
          * If not set any Shorting (ASC/DESC) than Post loop will Random by Shuffle()
